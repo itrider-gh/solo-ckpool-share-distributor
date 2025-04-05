@@ -2,6 +2,7 @@ import json
 import os
 import re
 import argparse
+import time
 from collections import defaultdict
 
 # === ARGUMENTS ===
@@ -9,22 +10,33 @@ parser = argparse.ArgumentParser(description="Distribute solo ckpool rewards per
 parser.add_argument("--logs", type=str, default="./logs", help="Path to ckpool logs directory (default: ./logs)")
 parser.add_argument("--output", type=str, default="./repartition.json", help="Path to output JSON file (default: ./repartition.json)")
 parser.add_argument("--username", type=str, required=True, help="Solo Bitcoin address used by all workers (required)")
+parser.add_argument("--days", type=int, default=14, help="Number of days to look back for rounds (default: 14)")
 
 args = parser.parse_args()
 base_dir = args.logs
 output_file = args.output
 solo_username = args.username
+cutoff_seconds = args.days * 24 * 3600  # Convert days to seconds
 
 # === INITIALIZATION ===
 total_vardiff_per_worker = defaultdict(float)
 share_count_per_worker = defaultdict(int)
 
-# === SCAN LAST 200 ROUNDS (~14 days of blocks) ===
+now = time.time()
+
+# === SCAN ROUND FOLDERS MODIFIED IN LAST N DAYS ===
 round_dirs = sorted([
     d for d in os.listdir(base_dir)
-    if os.path.isdir(os.path.join(base_dir, d)) and re.fullmatch(r'[0-9a-f]{8}', d)
-], reverse=True)[:200]
+    if (
+        os.path.isdir(os.path.join(base_dir, d))
+        and re.fullmatch(r"[0-9a-f]{8}", d)
+        and now - os.path.getmtime(os.path.join(base_dir, d)) <= cutoff_seconds
+    )
+], reverse=True)
 
+print(f"📁 Found {len(round_dirs)} round directories modified in the last {args.days} days")
+
+# === PARSE SHARELOG FILES ===
 for round_dir in round_dirs:
     round_path = os.path.join(base_dir, round_dir)
     for filename in os.listdir(round_path):
