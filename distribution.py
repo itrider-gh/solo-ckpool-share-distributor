@@ -6,7 +6,7 @@ import time
 from collections import defaultdict
 
 # === ARGUMENTS ===
-parser = argparse.ArgumentParser(description="Distribute solo ckpool rewards per worker based on vardiff and share count.")
+parser = argparse.ArgumentParser(description="Distribute solo ckpool rewards per worker based on vardiff sum.")
 parser.add_argument("--logs", type=str, default="./logs", help="Path to ckpool logs directory (default: ./logs)")
 parser.add_argument("--output", type=str, default="./repartition.json", help="Path to output JSON file (default: ./repartition.json)")
 parser.add_argument("--username", type=str, required=True, help="Solo Bitcoin address used by all workers (required)")
@@ -42,6 +42,7 @@ for round_dir in round_dirs:
     for filename in os.listdir(round_path):
         if filename.endswith(".sharelog"):
             filepath = os.path.join(round_path, filename)
+            print(f"🔍 Parsing: {filepath}")  # Affiche les fichiers scannés
             try:
                 with open(filepath, "r") as f:
                     for line in f:
@@ -57,14 +58,13 @@ for round_dir in round_dirs:
             except (FileNotFoundError, PermissionError):
                 continue
 
-# === COMPUTE WEIGHTS PER WORKER ===
+# === COMPUTE WEIGHTS PER WORKER (BASED ON SUM OF VARDIFF) ===
 worker_weights = {}
 for worker in share_count_per_worker:
-    avg_vardiff = total_vardiff_per_worker[worker] / share_count_per_worker[worker]
-    weight = share_count_per_worker[worker] * avg_vardiff
+    weight = total_vardiff_per_worker[worker]
     worker_weights[worker] = {
         "shares": share_count_per_worker[worker],
-        "avg_vardiff": avg_vardiff,
+        "total_vardiff": weight,
         "weight": weight
     }
 
