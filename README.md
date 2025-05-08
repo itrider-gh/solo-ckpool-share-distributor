@@ -13,24 +13,28 @@ This is intended for **solo mining setups** where:
 
 ```bash
 ./ckpool -B -L -c ckpool.conf
-```
+````
 
-- `-B`: Solo mining mode (all rewards go to a single address)
-- `-L`: Enables share logging in `logs/{round}/*.sharelog`
+* `-B`: Solo mining mode (all rewards go to a single address)
+* `-L`: Enables share logging in `logs/{round}/*.sharelog`
 
 ---
 
 ## ⚙️ How It Works
 
 The script:
+
 1. Scans `.sharelog` files from the last **X days** (default: 14)
 2. Filters shares submitted by the configured **Bitcoin address**
 3. Groups contributions by `workername`
 4. Computes per-worker:
-   - Total number of valid shares
-   - Average vardiff
-   - Weighted contribution (`shares × avg vardiff`)
-   - Proportional percentage of the total work
+
+   * Total number of valid shares
+   * Sum of vardiff (`diff`) values
+   * Weighted contribution (based on **sum of vardiff**)
+   * Proportional percentage of the total work
+
+📌 **Note**: Using the **sum of vardiff** instead of `shares × avg_difficulty` removes bias caused by vardiff fluctuations (e.g. when a worker connects late or has unstable hashrate).
 
 ---
 
@@ -44,7 +48,8 @@ python3 repartition.py \
 ```
 
 Optional arguments:
-- `--days 14`: Number of days to look back for sharelogs (default: 14)
+
+* `--days 14`: Number of days to look back for sharelogs (default: 14)
 
 ---
 
@@ -56,7 +61,7 @@ The output is a JSON file with one entry per worker:
 {
   "workerA": {
     "shares": 1024,
-    "avg_vardiff": 512.0,
+    "total_vardiff": 524288.0,
     "weight": 524288.0,
     "percentage": 45.8
   },
